@@ -8,6 +8,7 @@ import com.spring.miniguestbook.repository.GuestbookRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -22,6 +23,9 @@ public class GuestbookService {
     private final GuestbookRepository guestbookRepository;
 
     // 등록 : 요청 DTO → 엔티티로 만들어 저장하고, 저장 결과를 응답 DTO로 변환해 돌려줌
+    // @Transactional : 메서드 전체를 하나의 트랜잭션으로 묶는다.
+    //                  중간에 예외가 나면 DB 작업이 전부 취소(롤백)된다. : "다 되거나, 아예 안 되거나".
+    @Transactional
     public GuestbookResponse create(CreateGuestbook createGuestbook) {
         // 1) 요청 DTO의 값으로 엔티티 생성
         Guestbook guestbook = new Guestbook(
@@ -45,6 +49,9 @@ public class GuestbookService {
     }
 
     // 전체 조회 : 엔티티 목록을 하나씩 응답 DTO로 변환해 모음
+    // @Transactional(readOnly = true) : 읽기 전용 트랜잭션
+    //                  변경 감지 등 불필요한 작업을 줄여 조회 성능에 약간 이점이 있음. (조회는 readOnly로)
+    @Transactional(readOnly = true)
     public List<GuestbookResponse> findAll() {
         List<GuestbookResponse> guestbookResponseList = new ArrayList<>();
 
@@ -65,6 +72,8 @@ public class GuestbookService {
     }
 
     // 단건 조회 : id로 하나 찾아 응답 DTO로 변환 (없으면 getOrThrow가 404)
+    // 조회만 하므로 읽기 전용 트랜잭션
+    @Transactional(readOnly = true)
     public GuestbookResponse findOne(Long id) {
         Guestbook guestbook = getOrThrow(id);
 
@@ -80,6 +89,8 @@ public class GuestbookService {
     }
 
     // 수정 : 기존 글을 찾아 값만 바꾼 뒤 다시 저장
+    // @Transactional : 조회 → 변경 → 저장을 한 묶음으로. 도중 실패 시 전부 롤백
+    @Transactional
     public GuestbookResponse update(Long id, UpdateGuestbook updateGuestbook) {
         Guestbook guestbook = getOrThrow(id);
 
@@ -103,6 +114,8 @@ public class GuestbookService {
     }
 
     // 삭제 : 먼저 존재 여부를 확인(없으면 404)한 뒤 삭제
+    // @Transactional : 조회와 삭제를 하나의 트랜잭션으로 묶음
+    @Transactional
     public void delete(Long id) {
         Guestbook guestbook = getOrThrow(id);
         guestbookRepository.delete(guestbook);
